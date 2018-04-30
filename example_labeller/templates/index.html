@@ -1,0 +1,131 @@
+{% load labelling_tool_tags %}
+
+{% load static %}
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+
+<html>
+    <head>
+        <title>SMT Labelling Tool</title>
+
+        <script src="/static/jquery/jquery-2.1.1.min.js"></script>
+
+        <link rel="stylesheet" href="/static/jquery/jquery-ui.min.css">
+        <script src="/static/jquery/jquery-ui.min.js"></script>
+
+        <script src="/static/d3.min.js"></script>
+        <script src="/static/js.cookie.js"></script>
+        <script src="/static/json2.js"></script>
+        <script src="/static/polyk.js"></script>
+        <script src="/static/style/image_slider_script.js"></script>
+        <link rel="stylesheet" type="text/css" href="/static/style/image_slider.css" />
+        <script>
+            // **********************************************************************
+            var image_descriptors = {{ image_descriptors | safe }};
+            var assignmentId_value = '{{ assignmentId | safe }}';
+            var logged_in = '{{ logged_in | safe }}';
+        </script>
+
+        {% labelling_tool_scripts %}
+    </head>
+
+    <body>
+
+    <h1 style="text-align: center;">SMT Electronics Component Labelling</h1><br>
+    <h4 style="text-align: center;">Your task is to mark all the surface mount electronics components in the image below using the <span class="border border-dark">&nbspDraw box </span>&nbsp and <span class="border border-dark">&nbspDraw poly </span>&nbsp tools.</h4><br>
+
+    {% if preview_mode %}
+        <h4 style="text-align: center; color:orangered;">WARNING! This task requires a mouse. It cannot be competed on a touchscreen device such as a mobile phone or a tablet.</h4><br>
+        <h4 style="text-align: center; color:orangered;">Please watch the video, read the instructions and look at the examples at the bottom to make sure that you understand what to do before pressing Accept.</h4><br>
+        <div style="text-align: center;">
+            <iframe width="1024" height="576" src="https://www.youtube.com/embed/PB56M6F_5G4" frameborder="0" allowfullscreen ng-show="showvideo"></iframe><br><br>
+        </div>
+        <h5 style="text-align: center;">This is only a preview page of the task. Use it to play with the options and learn how to use the labelling tool. Try marking at least few components before starting the real work.</h5><br>
+        <h5 style="text-align: center;">You are not required to include the pins (legs) of a component if the component has more than 5 of them. See the example images.</h5><br>
+        <h4 style="text-align: center;">Press <span class="border border-dark">&nbspF11 </span>&nbsp on your keyboard for full screen.</h4><br><br>
+        <h4 style="text-align: center; color:dodgerblue;">Preview Mode.</h4>
+        <h5 style="text-align: center; color:dodgerblue;">If you see this text after you have clicked Accept button it means something went wrong on our end and you will not be able to Submit your work. <br> The 'Submit HIT (FINISH)' popup should offer two options 'close' and 'Submit'. Please report this problem if it occurs.</h5>
+    {% else %}
+        <h4 style="text-align: center;">If you don't know what to mark, please look at the examples at the bottom of the page.<br>(It is better to mark an object if you don't know if it is required. There is no penalty for that.)</h4>
+        <h5 style="text-align: center;">You are not required to include the pins (legs) of a component if the component has more than 5 of them. See the example images.</h5><br>
+        <h4 style="text-align: center;">Press <span class="border border-dark">&nbspF11 </span>&nbsp on your keyboard for full screen.</h4>
+    {% endif %}
+    {% if user.is_authenticated %}
+            <li>UserID: {{ user.get_username }}</li>
+    {% else %}
+            <li>User has not been authenticated</li>
+    {% endif %}
+    <li>Assignment ID: {{ assignmentId | safe }}</li>
+    <p>{{ ltapi_url }}</p>
+    {% url 'example_labeller:labelling_tool_api' as ltapi_url %}
+
+    {% labelling_tool 1850 1000 label_classes image_descriptors initial_image_index ltapi_url True labelling_tool_config %}
+
+    {% if preview_mode %}
+    <!-- Modal Preview Mode -->
+    <div class="modal fade" id="submitModal" tabindex="-1" role="dialog" aria-labelledby="submitModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">You are in preview mode</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                You are currently in preview mode. If you are sure that you have learned how to use this tool and understand the task, click Accept button on the top right corner to begin.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Modal Ready to send -->
+    <div class="modal fade" id="submitModal" tabindex="-1" role="dialog" aria-labelledby="submitModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Are you sure you have finished the task?</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                Please make sure that all of the components are marked in the same manner as in the example images. <br>Also, as technical errors can happen, please take a screenshot of your work before pressing SUBMIT.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Go Back</button>
+                    <button type="button" id="confirmSubmitButton" class="btn btn-primary">YES, SUBMIT WORK (FINISH)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <br><h2>Instructions for use</h2>
+
+    {% labelling_tool_instructions labelling_tool_config %}
+
+    <h1>Finished Examples:</h1>
+    Please try to mark the components in the same way as in these examples.<br><br>
+    <div class="slider" id="slider1">
+    <!-- Slides -->
+        {% for image in example_images %}
+            <div style=""><img class="example" src="/static/example_images/{{ image }}"></div>
+        {% endfor %}
+    <!-- The Arrows -->
+    <i class="left" class="arrows" style="z-index:2; position:absolute;"><svg viewBox="0 0 100 100"><path d="M 10,50 L 60,100 L 70,90 L 30,50  L 70,10 L 60,0 Z"></path></svg></i>
+    <i class="right" class="arrows" style="z-index:2; position:absolute;"><svg viewBox="0 0 100 100"><path d="M 10,50 L 60,100 L 70,90 L 30,50  L 70,10 L 60,0 Z" transform="translate(100, 100) rotate(180) "></path></svg></i>
+    <!-- Title Bar -->
+{#    <span class="titleBar">#}
+{#        <h1>This Slider has all default settings.</h1>#}
+{#    </span>#}
+    </div><br><br><br>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+
+    </body>
+</html>

@@ -1,0 +1,146 @@
+<div id="{{ tool_id }}"></div>
+
+
+<script>
+    $( document ).ready(function () {
+        // The Django based web API uses a class-based view at a single URL for all interaction with
+        // the client side tool.
+        // Here we define the callbacks that connect the `LabellingTool` instance with the
+        // server side API.
+        var get_labels = function(image_id) {
+            $.ajax({
+                type: 'GET',
+                url: '{{ labelling_tool_url }}' + '?labels_for_image_id=' + image_id,
+                success: function(response) {
+                    if (response.error === undefined) {
+                        tool.loadLabels(response, null);
+                    }
+                },
+                dataType: 'json'
+
+            });
+
+        };
+
+
+        {% if enable_locking %}
+            var get_next_unlocked_image_id = function(current_image_id) {
+                var index;
+                $.ajax({
+                    type: 'GET',
+                    url: '{{ labelling_tool_url }}' + '?next_unlocked_image_id_after=' + current_image_id,
+                    success: function(response) {
+                        if (response.error === undefined) {
+                            tool.goToImageById(response.next_unlocked_image_id);
+                            // Added by K. Vigulis ***************************************
+                            // replace u' with " and ' with "
+                            var ids = response.unlocked_img_ids.replace(/(?!\s|:)((u)(?='))/g, "").replace(/\'/g, '"');
+                            ids = JSON.parse(ids);
+                            console.log("Unlocked ID List: ", ids);
+                            console.log("Next ID: ", response.next_unlocked_image_id);
+                            index = image_descriptors.map(function(e) { return e.image_id; }).indexOf(response.next_unlocked_image_id);
+                            console.log("Index: ", index);
+                            document.getElementById("image_identifier").innerHTML = image_descriptors[index]["img_url"].replace("/media/", '');
+                            // ***********************************************************
+                        }
+                    },
+                    dataType: 'json'
+                });
+                return index;
+            };
+        {% else %}
+            var get_next_unlocked_image_id = null;
+        {% endif %}
+
+        var update_labels = function(label_header) {
+            if (logged_in) {
+                var labels_json_str = JSON.stringify(label_header);
+
+                // Create the POST data
+                var post_data = {
+                    labels: labels_json_str
+                };
+                console.log("assignmentId:", assignmentId_value);
+                $.ajax({
+                    type: 'POST',
+                    url: '{{ labelling_tool_url }}',
+                    data: post_data,
+                    success: function (msg) {
+                        tool.notifyLabelUpdateResponse(msg);
+                    },
+                    dataType: 'json'
+                });
+                console.log(post_data);
+            }
+            else {
+                console.log("Preview Mode");
+            }
+        };
+
+        function post(path, params, method) {
+            method = method || "post"; // Set method to post by default if not specified.
+
+            // The rest of this code assumes you are not using a library.
+            // It can be made less wordy if you use one.
+            var form = document.createElement("form");
+            form.setAttribute("method", method);
+            form.setAttribute("action", path);
+
+            for(var key in params) {
+                if(params.hasOwnProperty(key)) {
+                    var hiddenField = document.createElement("input");
+                    hiddenField.setAttribute("type", "hidden");
+                    hiddenField.setAttribute("name", key);
+                    hiddenField.setAttribute("value", params[key]);
+                    form.appendChild(hiddenField);
+                }
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+
+        // Sends label_header to AMT as a form POST. Called on 'SUBMIT' btn click.
+        var send_results_to_AMT = function(label_header) {
+            var labels_json_str = JSON.stringify(label_header);
+            console.log("Attempting to POST results to AMT...");
+            console.log("assignmentId:", assignmentId_value);
+            console.log("Results:", labels_json_str);
+            // IMPORTANT: remeber to set the correct URL depending on whether you was to test in sandbox or run in production  mode.
+            post('https://www.mturk.com/mturk/externalSubmit', {assignmentId:assignmentId_value, results: labels_json_str});
+        };
+
+
+        var tool = new labelling_tool.LabellingTool($("#{{ tool_id }}")[0],
+                {{ label_classes | safe }},
+                {{ width }},
+                {{ height }},
+                {{ image_descriptors | safe }},
+                get_next_unlocked_image_id(144), // inputs the image index to the 'LabellingTool' constructor.
+                get_labels,
+                update_labels,
+                get_next_unlocked_image_id, // inputs the the whole function to the 'LabellingTool' constructor.
+                {{ config | safe }},
+                send_results_to_AMT,
+        );
+
+        // CSRF Token setup
+        var csrftoken = Cookies.get('csrftoken');
+{#        var csrftoken = '{{ csrf_token }}';#}
+        if (csrftoken != null) {
+            // Adapted from Django DOCS
+            function csrfSafeMethod(method) {
+                // these HTTP methods do not require CSRF protection
+                return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+            }
+
+            $.ajaxSetup({
+                beforeSend: function(xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+                    }
+                }
+            });
+        }
+    });
+</script>

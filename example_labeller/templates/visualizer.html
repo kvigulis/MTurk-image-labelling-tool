@@ -1,0 +1,54 @@
+{% load labelling_tool_tags %}
+
+{% load static %}
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+<html>
+    <head>
+        <title>SMT Labelling Tool</title>
+
+        <script src="/static/jquery/jquery-2.1.1.min.js"></script>
+
+        <link rel="stylesheet" href="/static/jquery/jquery-ui.min.css">
+        <script src="/static/jquery/jquery-ui.min.js"></script>
+
+        <script src="/static/d3.min.js"></script>
+        <script src="/static/js.cookie.js"></script>
+        <script src="/static/json2.js"></script>
+        <script src="/static/polyk.js"></script>
+        <script>
+            // **********************************************************************
+            var image_descriptors = {{ image_descriptors | safe }};
+            var assignmentId_value = '{{ assignmentId | safe }}';
+            var logged_in = '{{ logged_in | safe }}';
+
+        </script>
+
+        {% visualizer_scripts %}
+    </head>
+
+    <body style="padding-left:1em">
+
+
+
+    <h1 style="padding-left:10em">SMT Electronics Component Labelling</h1><br><br>
+    {% if user.is_authenticated %}
+            <li>UserID: {{ user.get_username }}</li>
+    {% else %}
+            <li>User has not been authenticated</li>
+    {% endif %}
+
+    {% url 'example_labeller:labelling_tool_api' as ltapi_url %}
+
+    {% labelling_tool 1600 1000 label_classes image_descriptors initial_image_index ltapi_url True labelling_tool_config %}
+
+
+
+    <br><h2>Instructions for use</h2>
+
+    {% labelling_tool_instructions labelling_tool_config %}
+
+
+    </body>
+</html>
